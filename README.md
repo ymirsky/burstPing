@@ -49,6 +49,7 @@ $ sudo ./burstPing -h
    ICMP Echo Requests are sent back-to-back (with out waiting for a response) and at a rate of 0.5*meanRTT. By default, 1000 requests are made. You can optionally configure the number of packets, the transmission rate (in nanoseconds), and the payload size (max 1500 Bytes)."<<endl<<endl;
    Usage: ./burstPing destination [-s payload_size]"<<endl<<"\t[-i interval_nsec] [-c burst_size] [-f save_filename]
    Example: ./burstPing 192.168.0.1 -i 100 -c 10000 -s 1500 -f out.csv
+```
 
 # License
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details

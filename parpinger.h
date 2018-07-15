@@ -90,22 +90,19 @@ class parPinger
     timespec ping_interval;
     long double avrgRTT;
     int send_count;
-    int send_pulse(int length);
     static mutex probe_mtx;
     static mutex id_mtx;
     uint16_t scnrID;
     static int n_probeThreads;
-    mutex rawBurstUpdate_mtx; //for protecting the aquirement/processing of new bursts
-    mutex featUpdate_mtx; //for protecting the aquirement of the latest features
-    int numFeat;
+
+    int send_pulse(int length);
     uint16_t in_cksum(uint16_t *addr, unsigned len);
     vector<double> probe(string targetIP);
-    vector<point> curRawBurst;
-    long long curBurst_id;
-    std::condition_variable cv; //for notifying the the feature extractor of new work
     static void logf( const std::string &filename,const std::string &text );
-	double probe_avrgRTT(int count); //sends count pings to measure RTT. Each ping is sent AFTER each response.
-	void timespec_diff(struct timespec &startOverhead, struct timespec &stopOverhead, struct timespec &sendInterval, struct timespec &computed_sleepInterval);
+    double probe_avrgRTT(int count); //sends count pings to measure RTT. Each ping is sent AFTER each response.
+    void timespec_diff(struct timespec &startOverhead, struct timespec &stopOverhead, struct timespec &sendInterval, struct timespec &computed_sleepInterval);
+    static struct  timespec  tsSubtract (struct  timespec  time1, struct  timespec  time2);
+    static string ts2string(struct timespec t);
 
 };
 

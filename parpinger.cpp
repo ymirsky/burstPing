@@ -23,6 +23,8 @@ SOFTWARE. */
 #include <sys/syscall.h>
 #include <math.h>
 #include <algorithm>
+#include <limits>
+#include <iomanip>
 
 mutex parPinger::probe_mtx;
 mutex parPinger::id_mtx;
@@ -202,24 +204,38 @@ void* parPinger::recvMain(void *args)
 
     if(recv_times.size()!=0){
         /////// Compute RTTs ///////
-        vector<int> indexes(prthr->send_times.size(),0);
+        vector<long> indexes(prthr->send_times.size(),0);
         vector<double> tx_time(prthr->send_times.size(),0);
         vector<double> rx_time(prthr->send_times.size(),0);
         vector<double> rtt(prthr->send_times.size(),0);
+        vector<timespec> rtt_ts(prthr->send_times.size());
+        vector<timespec> rx_ts(prthr->send_times.size());
 
         int rx_indx = 0;
+        struct timespec empty_ts;
+        long indx_cntr = 0;
         for(int i=0;i<prthr->send_times.size();i++)//assume that replies are in same order as requests
         {
-            indexes[i] = prthr->send_times[i].indx;
+            indx_cntr++;
+            indexes[i] = indx_cntr;
             tx_time[i] = (double)(prthr->send_times[i].t.tv_sec) + ((double)(prthr->send_times[i].t.tv_nsec)/1000000000.0);
             if(prthr->send_times[i].indx==recv_times[rx_indx].indx)
             {
                 rx_time[i] = (double)(recv_times[rx_indx].t.tv_sec) + ((double)(recv_times[rx_indx].t.tv_nsec)/1000000000.0);
                 rtt[i] = rx_time[i] - tx_time[i];
+                if(rtt[i]<=0)//rounding float error
+                {
+                    rtt[i] = ((double)(tsSubtract(recv_times[rx_indx].t,prthr->send_times[i].t).tv_nsec))/1000000000.0;
+                }
+                rtt_ts[i] = tsSubtract(recv_times[rx_indx].t,prthr->send_times[i].t);
+                rx_ts[i] = recv_times[rx_indx].t;
                 rx_indx++;
             }else{
                 rx_time[i] = nan("");
                 rtt[i] = nan("");
+                empty_ts.tv_sec = 0; empty_ts.tv_nsec = 0;
+                rtt_ts[i] = empty_ts;
+                rx_ts[i] = empty_ts;
             }
         }
         //////// Print Stats ////////
@@ -259,15 +275,21 @@ void* parPinger::recvMain(void *args)
         cout<<"--- "<<prthr->targetIP<<" burst ping statistics ---"<<endl;
         double total_sent = (double)prthr->send_times.size();
         cout<<prthr->send_times.size()<<" packets transmitted, "<<N<<" received, "<<100.0*((total_sent-N)/total_sent)<<"% packet loss, total burst time "<<prthr->burstTime<<" sec"<<endl;
-        cout<<"rtt min/avg/max/mdev = "<<min*1000<<"/"<<mean*1000<<"/"<<max*1000<<"/"<<sd*1000<<" ms"<<endl;
+        cout.precision(6);
+        cout<<"rtt min/avg/max/mdev = ~"<< min*1000.0<<"/"<<mean*1000<<"/"<<max*1000<<"/"<<sd*1000<<" ms"<<endl;
 
         //////// Save RTTs to file? /////
         if(prthr->filename.compare("")!=0){
             logf(prthr->filename,"index, tx_time, rx_time, rtt_time"); //header
             string row;
+
             for(int i=0;i<prthr->send_times.size();i++)
             {
-                row = to_string(indexes[i]) + ", " + to_string(tx_time[i])+ ", " + to_string(rx_time[i])+ ", " + to_string(rtt[i]);
+                //row = to_string(indexes[i]) + ", " + to_string(tx_time[i])+ ", " + to_string(rx_time[i])+ ", " + to_string(rtt[i]);
+                row = to_string(indexes[i]) + ", " +
+                      ts2string(prthr->send_times[i].t) + ", " +
+                      ts2string(rx_ts[i]) + ", " +
+                      ts2string(rtt_ts[i]);
                 logf(prthr->filename,row);
             }
         }
@@ -617,8 +639,49 @@ void parPinger::timespec_diff(struct timespec &startOverhead, struct timespec &s
     return;
 }
 
-void parPinger::logf( const std::string &filename,const std::string &text )
+
+
+struct  timespec  parPinger::tsSubtract (struct  timespec  time1, struct  timespec  time2)
+{    /* Local variables. */
+    struct  timespec  result ;
+
+/* Subtract the second time from the first. */
+
+    if ((time1.tv_sec < time2.tv_sec) ||
+        ((time1.tv_sec == time2.tv_sec) &&
+         (time1.tv_nsec <= time2.tv_nsec))) {		/* TIME1 <= TIME2? */
+        result.tv_sec = result.tv_nsec = 0 ;
+    } else {						/* TIME1 > TIME2 */
+        result.tv_sec = time1.tv_sec - time2.tv_sec ;
+        if (time1.tv_nsec < time2.tv_nsec) {
+            result.tv_nsec = time1.tv_nsec + 1000000000L - time2.tv_nsec ;
+            result.tv_sec-- ;				/* Borrow a second. */
+        } else {
+            result.tv_nsec = time1.tv_nsec - time2.tv_nsec ;
+        }
+    }
+
+    return (result) ;
+}
+
+string parPinger::ts2string(struct timespec t)
 {
+    string ts;
+    ts += to_string(t.tv_sec);
+    ts += ".";
+    string rm = to_string(t.tv_nsec);
+    int zeros = 9;
+    int nanos = rm.size();
+    for(int i =0; i < zeros - nanos; i++)
+        ts += "0";
+    for(int i =0; i < nanos; i++)
+        ts += rm.at(i);
+    return ts;
+}
+
+
+void parPinger::logf( const std::string &filename,const std::string &text )
+{   
     std::ofstream log_file(
                 filename, std::ios_base::out | std::ios_base::app );
     log_file << text << endl;

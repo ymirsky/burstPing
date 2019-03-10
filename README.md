@@ -1,5 +1,7 @@
 # Overview
-In this repository you will find a linux utility, written in c++, for sending an intense burst of pings to a target IP address, and then computing the round-trip-time (RTT) statistics.
+In this repository you will find a linux utility, written in c++, for sending an intense burst of pings to a target IP address, and then computing the round-trip-time (RTT) statistics. This work reflect a portion of the research performed in
+
+*Mirsky Y, Kalbo N, Elovici Y, Shabtai A. Vesper: Using Echo-Analysis to Detect Man-in-the-Middle Attacks in LANs. IEEE Transactions on Information Forensics and Security. 2018 Nov 23.*
 
 
 ## ping vs burstPing
@@ -50,6 +52,9 @@ $ sudo ./burstPing -h
    Usage: ./burstPing destination [-s payload_size]"<<endl<<"\t[-i interval_nsec] [-c burst_size] [-f save_filename]
    Example: ./burstPing 192.168.0.1 -i 100 -c 10000 -s 1500 -f out.csv
 ```
+# Citation
+
+*Mirsky Y, Kalbo N, Elovici Y, Shabtai A. Vesper: Using Echo-Analysis to Detect Man-in-the-Middle Attacks in LANs. IEEE Transactions on Information Forensics and Security. 2018 Nov 23.*
 
 # License
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details
